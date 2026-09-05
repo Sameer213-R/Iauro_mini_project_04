@@ -98,6 +98,42 @@ df_order = (
 
 
 # --------------------------------------------------
+# creating temperary views for customer and order data
+# -------------------------------------------------
+df_customer.createOrReplaceTempView("customer")
+df_order.createOrReplaceTempView("order")
+
+
+# -----------------------------------------------
+# adding quelity check for the customer and order data for dedup 
+#-----------------------------------------------
+
+df_customer = df_customer.spark.sql("""
+    delete from  customer where customer_id in (
+    
+    select customer_id from (
+    
+    select customer_id,row_number() over(PARTITION BY customer_id) as rnk
+    from customer where rnk>1
+    )
+    )
+
+""")
+
+df_order = df_order.spark.sql("""
+delete from orders where order_id in (
+    select order_id from (
+    select order_id, row_number over(PARTITION BY order_id) as rnk
+    from orders
+    where  rnk > 1
+    )
+)
+
+""")
+
+
+
+# --------------------------------------------------
 # Display input data
 # --------------------------------------------------
 
